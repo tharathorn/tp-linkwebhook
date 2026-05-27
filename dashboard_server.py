@@ -230,7 +230,7 @@ h2 {{ margin:0; font-size:17px; }} .panel-meta {{ color:var(--muted); font-size:
 .sev.critical {{ color:var(--red); background:rgba(255,77,113,.14); }}
 .category {{ font:12px "Consolas","SFMono-Regular",monospace; color:var(--cyan); background:rgba(33,212,253,.08); padding:4px 8px; border-radius:6px; }}
 .site {{ color:var(--muted); font-size:12px; }}
-.table-wrap {{ overflow:auto; max-height:680px; }}
+.table-wrap {{ overflow:auto; max-height:680px; -webkit-overflow-scrolling:touch; }}
 table {{ width:100%; border-collapse:collapse; min-width:760px; }}
 th {{ position:sticky; top:0; z-index:1; background:#101829; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; font-size:10px; }}
 th,td {{ text-align:left; padding:13px 14px; border-bottom:1px solid rgba(29,42,66,.75); vertical-align:top; }}
@@ -254,8 +254,38 @@ td:first-child {{ white-space:nowrap; color:var(--muted); font-size:12px; }}
 .json summary {{ cursor:pointer; display:inline-flex; align-items:center; color:var(--cyan); border:1px solid rgba(33,212,253,.26); border-radius:7px; padding:5px 9px; font-size:12px; font-weight:600; }}
 .json summary:hover {{ background:rgba(33,212,253,.08); }}
 .json pre {{ margin:10px 0 0; background:#05070e; border:1px solid var(--stroke); color:#a9d7ff; padding:12px; border-radius:9px; overflow-x:auto; white-space:pre-wrap; font:12px "Consolas", monospace; }}
-@media (max-width: 1060px) {{ .grid {{ grid-template-columns:1fr; }} .cards {{ grid-template-columns:repeat(2,1fr); }} }}
-@media (max-width: 640px) {{ .shell {{ padding:20px 15px; }} .topbar {{ display:block; }} .live {{ margin-top:18px; width:max-content; }} .cards {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1200px) {{ .cards {{ grid-template-columns:repeat(2,minmax(160px,1fr)); }} }}
+@media (max-width: 1060px) {{ .grid {{ grid-template-columns:1fr; }} .table-wrap {{ max-height:520px; }} }}
+@media (max-width: 760px) {{
+  .shell {{ padding:20px 14px 28px; }}
+  .topbar {{ display:block; margin-bottom:18px; }}
+  h1 {{ font-size:30px; }}
+  .subtitle {{ font-size:14px; line-height:1.45; }}
+  .live {{ margin-top:14px; width:max-content; }}
+  .cards {{ grid-template-columns:1fr; gap:10px; margin-bottom:16px; }}
+  .card {{ padding:14px 14px; border-radius:12px; }}
+  .value {{ font-size:32px; margin-top:8px; }}
+  .panel {{ border-radius:12px; }}
+  .panel-header {{ padding:14px 14px 10px; }}
+  .alerts-body {{ padding:6px 10px 10px; }}
+  .alert {{ padding:10px 4px; }}
+  table {{ min-width:680px; }}
+  th,td {{ padding:10px 9px; }}
+  td:first-child {{ min-width:156px; }}
+  .alert-message {{ font-size:13px; }}
+  .llm {{ gap:6px; }}
+  .llm-score {{ font-size:11px; }}
+  .json summary {{ padding:4px 8px; }}
+  .admin-header {{ display:block; }}
+  .logout {{ margin-top:10px; }}
+}}
+@media (max-width: 480px) {{
+  .eyebrow {{ letter-spacing:.13em; }}
+  h1 {{ font-size:26px; line-height:1.1; }}
+  .table-wrap {{ max-height:440px; }}
+  table {{ min-width:620px; }}
+  .category {{ font-size:11px; }}
+}}
 </style></head><body>
 <main class="shell">
 <header class="topbar"><div>
