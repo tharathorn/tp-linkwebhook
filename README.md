@@ -12,6 +12,7 @@ alerts to Telegram recipients.
 - Password-protected dashboard with signed sessions and CSRF-protected actions
 - Telegram `/start` enrollment with dashboard `Approve` and `Revoke` workflow
 - Telegram notifications sent only to approved recipients
+- Optional Gemini API triage to prioritize important alerts before Telegram delivery
 - Python standard-library runtime with `systemd` service examples
 
 ## Security
@@ -38,6 +39,7 @@ it in production.
 | `event_model.py` | Normalizes events and stores Telegram recipient state |
 | `dashboard_server.py` | Provides the authenticated dashboard and admin actions |
 | `telegram_notifier.py` | Polls Telegram and delivers approved alerts |
+| `llm_analyzer.py` | Calls Gemini API and scores alert importance |
 | `backfill_events.py` | Backfills or re-normalizes stored raw events |
 
 ## Quick Setup
@@ -107,9 +109,22 @@ Select the Omada payload template and set the same shared secret as in
 Telegram integration uses Bot API long polling (`getUpdates`), so do not also
 configure a Telegram webhook for the same bot.
 
+### LLM Alert Triage (Gemini)
+
+Set `GEMINI_API_KEY` in `/etc/omada-telegram.env` to enable LLM triage.
+When enabled, the worker asks Gemini to classify each actionable event and sends
+Telegram notifications only when:
+
+- `requires_human` is `true`, or
+- `priority` is `high`/`critical`, or
+- `score >= LLM_PRIORITY_THRESHOLD`
+
+If Gemini is unavailable, the worker falls back to standard notifications and
+records the analysis error for audit.
+
 ## Test
 
 ```bash
 python3 -m unittest -v \
-  test_dashboard_server.py test_event_model.py test_telegram_notifier.py test_webhook_server.py
+  test_dashboard_server.py test_event_model.py test_llm_analyzer.py test_telegram_notifier.py test_webhook_server.py
 ```

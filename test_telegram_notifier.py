@@ -6,6 +6,7 @@ from pathlib import Path
 from event_model import EventStore
 from telegram_notifier import (
     deliver_to_approved,
+    deliver_to_approved_with_llm,
     format_message,
     process_updates,
     run_cycle,
@@ -99,6 +100,40 @@ class TelegramNotifierTest(unittest.TestCase):
             )
 
         self.assertEqual([chat_id for chat_id, _ in sent], ["approved-chat"])
+
+    def test_llm_can_filter_out_low_priority_notifications(self):
+        self.store.insert_raw_event(
+            "2026-05-27T04:51:47+00:00",
+            "10.40.40.30",
+            {"text": ["AP Lobby disconnected."]},
+            {},
+        )
+        self.store.upsert_telegram_recipient("approved-chat", "approved", "Approved")
+        self.store.set_telegram_recipient_status("approved-chat", "approved")
+
+        class FakeAnalyzer:
+            model = "fake-model"
+
+            def analyze_event(self, _event, _recent):
+                return {
+                    "priority": "low",
+                    "score": 0.1,
+                    "incident_type": "other",
+                    "summary_th": "noise",
+                    "impact": "low",
+                    "recommended_actions": [],
+                    "requires_human": False,
+                    "fingerprint": "fp-noise",
+                }
+
+        sent = []
+        delivered = deliver_to_approved_with_llm(
+            self.store, lambda chat_id, text: sent.append((chat_id, text)), FakeAnalyzer(), 0.75
+        )
+
+        self.assertEqual(delivered, 0)
+        self.assertEqual(sent, [])
+        self.assertEqual(self.store.pending_recipient_notifications("approved-chat"), [])
 
 
 if __name__ == "__main__":

@@ -218,6 +218,29 @@ class EventStore:
                 )
                 """
             )
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS llm_incidents (
+                    raw_event_id INTEGER PRIMARY KEY,
+                    analyzed_at TEXT NOT NULL,
+                    model TEXT,
+                    priority TEXT NOT NULL,
+                    score REAL NOT NULL,
+                    incident_type TEXT NOT NULL,
+                    summary_th TEXT NOT NULL,
+                    impact TEXT NOT NULL,
+                    recommended_actions_json TEXT NOT NULL,
+                    requires_human INTEGER NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    should_notify INTEGER NOT NULL,
+                    error TEXT,
+                    FOREIGN KEY(raw_event_id) REFERENCES events(id)
+                )
+                """
+            )
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_llm_notify ON llm_incidents(should_notify, analyzed_at DESC)"
+            )
 
     def normalize_raw(self, db, raw_event_id, received_at, payload):
         event = normalize_payload(payload)
@@ -501,6 +524,69 @@ class EventStore:
                     str(chat_id),
                     datetime.now(timezone.utc).isoformat(),
                     status,
+                    error,
+                ),
+            )
+
+    def recent_events(self, limit=25):
+        with self.connect() as db:
+            return [
+                dict(row)
+                for row in db.execute(
+                    """
+                    SELECT raw_event_id, received_at, severity, category, message, site
+                    FROM normalized_events
+                    ORDER BY received_at DESC
+                    LIMIT ?
+                    """,
+                    (max(1, min(int(limit), 100)),),
+                ).fetchall()
+            ]
+
+    def get_llm_incident(self, raw_event_id):
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM llm_incidents WHERE raw_event_id = ?",
+                (raw_event_id,),
+            ).fetchone()
+            if not row:
+                return None
+            item = dict(row)
+            item["recommended_actions"] = json.loads(item["recommended_actions_json"])
+            item["requires_human"] = bool(item["requires_human"])
+            item["should_notify"] = bool(item["should_notify"])
+            return item
+
+    def record_llm_incident(
+        self,
+        raw_event_id,
+        model,
+        analysis,
+        should_notify,
+        error=None,
+    ):
+        with self.connect() as db:
+            db.execute(
+                """
+                INSERT OR REPLACE INTO llm_incidents (
+                    raw_event_id, analyzed_at, model, priority, score, incident_type,
+                    summary_th, impact, recommended_actions_json, requires_human,
+                    fingerprint, should_notify, error
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    raw_event_id,
+                    datetime.now(timezone.utc).isoformat(),
+                    model or "",
+                    analysis.get("priority", "medium"),
+                    float(analysis.get("score", 0.0)),
+                    analysis.get("incident_type", "other"),
+                    analysis.get("summary_th", ""),
+                    analysis.get("impact", ""),
+                    json.dumps(analysis.get("recommended_actions", []), ensure_ascii=False),
+                    1 if analysis.get("requires_human") else 0,
+                    analysis.get("fingerprint", "none"),
+                    1 if should_notify else 0,
                     error,
                 ),
             )

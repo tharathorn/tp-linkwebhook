@@ -210,6 +210,36 @@ class EventStoreTest(unittest.TestCase):
                 store.pending_recipient_notifications("10002")[0]["raw_event_id"], raw_id
             )
 
+    def test_records_and_reads_llm_incident(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = EventStore(Path(directory) / "events.sqlite3")
+            raw_id = store.insert_raw_event(
+                "2026-05-27T02:32:51+00:00",
+                "10.40.40.30",
+                {"text": ["AP Lobby disconnected."]},
+                {},
+            )
+            store.record_llm_incident(
+                raw_id,
+                "gemini-2.5-flash",
+                {
+                    "priority": "high",
+                    "score": 0.91,
+                    "incident_type": "ap_disconnected",
+                    "summary_th": "AP หลุด",
+                    "impact": "ผู้ใช้บางส่วนได้รับผลกระทบ",
+                    "recommended_actions": ["ตรวจ uplink"],
+                    "requires_human": True,
+                    "fingerprint": "ap-disc-1",
+                },
+                should_notify=True,
+                error=None,
+            )
+            saved = store.get_llm_incident(raw_id)
+            self.assertEqual(saved["priority"], "high")
+            self.assertEqual(saved["recommended_actions"], ["ตรวจ uplink"])
+            self.assertTrue(saved["should_notify"])
+
 
 if __name__ == "__main__":
     unittest.main()
