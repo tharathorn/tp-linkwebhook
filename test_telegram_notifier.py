@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 
 from event_model import EventStore
@@ -7,6 +8,7 @@ from telegram_notifier import (
     deliver_to_approved,
     format_message,
     process_updates,
+    run_cycle,
     should_notify,
 )
 
@@ -72,6 +74,29 @@ class TelegramNotifierTest(unittest.TestCase):
         sent = []
 
         deliver_to_approved(self.store, lambda chat_id, text: sent.append((chat_id, text)))
+
+        self.assertEqual([chat_id for chat_id, _ in sent], ["approved-chat"])
+
+    def test_sends_pending_alert_before_waiting_for_telegram_updates(self):
+        self.store.insert_raw_event(
+            "2026-05-27T04:51:47+00:00",
+            "10.40.40.30",
+            {"text": ["AP Lobby disconnected."]},
+            {},
+        )
+        self.store.upsert_telegram_recipient("approved-chat", "approved", "Approved")
+        self.store.set_telegram_recipient_status("approved-chat", "approved")
+        sent = []
+
+        def timeout_fetch(_offset):
+            raise urllib.error.URLError("poll timed out")
+
+        with self.assertRaises(urllib.error.URLError):
+            run_cycle(
+                self.store,
+                timeout_fetch,
+                lambda chat_id, text: sent.append((chat_id, text)),
+            )
 
         self.assertEqual([chat_id for chat_id, _ in sent], ["approved-chat"])
 

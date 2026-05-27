@@ -25,13 +25,13 @@ def send_message(bot_token, chat_id, message):
     telegram_api_request(bot_token, "sendMessage", {"chat_id": chat_id, "text": message})
 
 
-def telegram_api_request(bot_token, method, payload):
+def telegram_api_request(bot_token, method, payload, request_timeout=15):
     url = f"https://api.telegram.org/bot{bot_token}/{method}"
     data = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(
         url, data=data, method="POST", headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(request, timeout=15) as response:
+    with urllib.request.urlopen(request, timeout=request_timeout) as response:
         if response.status != 200:
             raise RuntimeError(f"Telegram returned HTTP {response.status}")
         result = json.loads(response.read().decode("utf-8"))
@@ -85,6 +85,7 @@ def fetch_updates(bot_token, offset, timeout=20):
         bot_token,
         "getUpdates",
         {"offset": offset, "timeout": timeout, "allowed_updates": ["message"]},
+        request_timeout=timeout + 5,
     ) or []
 
 
@@ -107,6 +108,13 @@ def deliver_to_approved(store, send_fn):
     return delivered
 
 
+def run_cycle(store, fetch_fn, send_fn):
+    delivered = deliver_to_approved(store, send_fn)
+    updates = fetch_fn(store.get_telegram_update_offset())
+    processed = process_updates(store, updates, send_fn)
+    return delivered, processed
+
+
 def main():
     db_path = Path(os.environ.get("WEBHOOK_DB", "/var/lib/omada-webhook/events.sqlite3"))
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -117,12 +125,10 @@ def main():
             time.sleep(interval)
             continue
         try:
-            updates = fetch_updates(bot_token, store.get_telegram_update_offset())
-            process_updates(
-                store, updates, lambda chat_id, message: send_message(bot_token, chat_id, message)
-            )
-            deliver_to_approved(
-                store, lambda chat_id, message: send_message(bot_token, chat_id, message)
+            run_cycle(
+                store,
+                lambda offset: fetch_updates(bot_token, offset),
+                lambda chat_id, message: send_message(bot_token, chat_id, message),
             )
         except (OSError, urllib.error.URLError, RuntimeError, json.JSONDecodeError):
             time.sleep(interval)
