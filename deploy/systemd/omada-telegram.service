@@ -1,0 +1,23 @@
+[Unit]
+Description=Omada alert Telegram notifier
+After=network-online.target omada-webhook.service
+Wants=network-online.target
+Requires=omada-webhook.service
+
+[Service]
+Type=simple
+User=omada
+Group=omada
+EnvironmentFile=/etc/omada-webhook.env
+EnvironmentFile=/etc/omada-telegram.env
+ExecStart=/usr/bin/python3 /opt/omada-webhook/telegram_notifier.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/omada-webhook
+
+[Install]
+WantedBy=multi-user.target

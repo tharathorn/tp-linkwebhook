@@ -1,0 +1,22 @@
+[Unit]
+Description=Omada alerts and events dashboard
+After=network.target omada-webhook.service
+Requires=omada-webhook.service
+
+[Service]
+Type=simple
+User=omada
+Group=omada
+EnvironmentFile=/etc/omada-webhook.env
+EnvironmentFile=/etc/omada-dashboard-auth.env
+ExecStart=/usr/bin/python3 /opt/omada-webhook/dashboard_server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/omada-webhook
+
+[Install]
+WantedBy=multi-user.target

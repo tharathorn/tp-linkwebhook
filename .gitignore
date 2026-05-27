@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+*.ndjson
+*.log
+.env
+*.env
+!config/*.env.example
+*.key
+*.pem
+id_*
+.ssh/
