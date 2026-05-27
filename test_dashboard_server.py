@@ -98,6 +98,37 @@ class DashboardServerTest(unittest.TestCase):
         self.assertIn(b"--bg: #070a12", body)
         self.assertIn(b"Live ingestion", body)
 
+    def test_dashboard_shows_llm_triage_details_when_present(self):
+        raw_id = self.store.insert_raw_event(
+            received_at="2026-05-27T03:10:40+00:00",
+            source_ip="10.40.40.31",
+            payload={"Site": "Omada Workshop", "text": ["AP Branch disconnected."]},
+            headers={},
+        )
+        self.store.record_llm_incident(
+            raw_id,
+            "gemini-2.5-flash",
+            {
+                "priority": "high",
+                "score": 0.91,
+                "incident_type": "ap_disconnected",
+                "summary_th": "AP สาขาหลุดจากระบบ",
+                "impact": "ผู้ใช้ในสาขานั้นใช้งานไม่ได้",
+                "recommended_actions": ["ตรวจ uplink"],
+                "requires_human": True,
+                "fingerprint": "ap-branch-disc",
+            },
+            should_notify=True,
+            error=None,
+        )
+
+        status, _, body = self.get("/")
+
+        self.assertEqual(status, 200)
+        self.assertIn(b"score 0.91", body)
+        self.assertIn(b"notify", body)
+        self.assertIn(b"LLM", body)
+
 
 class AuthenticatedDashboardServerTest(unittest.TestCase):
     def setUp(self):

@@ -85,6 +85,9 @@ def render_page(store, csrf_token=None):
         severity="warning", limit=10
     )
     alerts.sort(key=lambda item: item["received_at"], reverse=True)
+    llm_map = store.llm_incidents_for_event_ids(
+        [item.get("raw_event_id") for item in (alerts[:10] + events)]
+    )
     def payload_details(item):
         try:
             payload = json.loads(item["payload_json"])
@@ -96,6 +99,22 @@ def render_page(store, csrf_token=None):
             f"<pre>{html.escape(formatted)}</pre></details>"
         )
 
+    def llm_summary(item):
+        incident = llm_map.get(int(item.get("raw_event_id") or 0))
+        if not incident:
+            return '<div class="llm none">LLM: pending</div>'
+        verdict = "notify" if incident.get("should_notify") else "filtered"
+        error = incident.get("error")
+        error_line = f'<div class="llm-error">{html.escape(error)}</div>' if error else ""
+        return (
+            '<div class="llm">'
+            f'<span class="llm-pill {html.escape(incident["priority"])}">{html.escape(incident["priority"])}</span>'
+            f'<span class="llm-score">score {incident["score"]:.2f}</span>'
+            f'<span class="llm-verdict {verdict}">{verdict}</span>'
+            f"{error_line}"
+            "</div>"
+        )
+
     alert_rows = "".join(
         "<div class=\"alert\">"
         "<div class=\"alert-head\">"
@@ -104,6 +123,7 @@ def render_page(store, csrf_token=None):
         f"<span class=\"site\">{html.escape(item['site'] or '-')}</span>"
         "</div>"
         f"<div class=\"alert-message\">{html.escape(item['message'] or '-')}</div>"
+        f"{llm_summary(item)}"
         f"{payload_details(item)}"
         "</div>"
         for item in alerts[:10]
@@ -115,6 +135,7 @@ def render_page(store, csrf_token=None):
         f"<td><span class=\"category\">{html.escape(item['category'])}</span></td>"
         f"<td>{html.escape(item['site'] or '-')}</td>"
         f"<td>{html.escape(item['message'] or '-')}</td>"
+        f"<td>{llm_summary(item)}</td>"
         f"<td>{payload_details(item)}</td>"
         "</tr>"
         for item in events
@@ -191,6 +212,18 @@ h2 {{ margin:0; font-size:17px; }} .panel-meta {{ color:var(--muted); font-size:
 .alert:last-child {{ border-bottom:none; }}
 .alert-head {{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:9px; }}
 .alert-message {{ font-size:14px; line-height:1.45; color:#dce5f7; }}
+.llm {{ margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }}
+.llm.none {{ color:var(--muted); font-size:12px; }}
+.llm-pill {{ padding:3px 8px; border-radius:999px; text-transform:uppercase; font-size:10px; font-weight:700; letter-spacing:.08em; }}
+.llm-pill.low {{ color:#9ab4d0; background:rgba(154,180,208,.15); }}
+.llm-pill.medium {{ color:var(--cyan); background:rgba(33,212,253,.16); }}
+.llm-pill.high {{ color:var(--yellow); background:rgba(255,200,87,.16); }}
+.llm-pill.critical {{ color:var(--red); background:rgba(255,77,113,.16); }}
+.llm-score {{ color:var(--muted); font-size:12px; }}
+.llm-verdict {{ padding:3px 8px; border-radius:999px; font-size:10px; text-transform:uppercase; font-weight:700; }}
+.llm-verdict.notify {{ color:var(--green); background:rgba(20,241,149,.16); }}
+.llm-verdict.filtered {{ color:#9ab4d0; background:rgba(154,180,208,.16); }}
+.llm-error {{ width:100%; color:var(--red); font-size:11px; }}
 .sev {{ display:inline-flex; padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }}
 .sev.info {{ color:var(--cyan); background:rgba(33,212,253,.12); }}
 .sev.warning {{ color:var(--yellow); background:rgba(255,200,87,.12); }}
@@ -239,7 +272,7 @@ td:first-child {{ white-space:nowrap; color:var(--muted); font-size:12px; }}
 <section class="grid">
 <div class="panel"><div class="panel-header"><h2>Actionable Alerts</h2><div class="panel-meta">Warning and critical signals prioritized for response</div></div><div class="alerts-body">{alert_rows}</div></div>
 <div class="panel"><div class="panel-header"><h2>Omada Alerts and Events</h2><div class="panel-meta">Live event stream - select Show JSON to inspect the sanitized Omada payload</div></div>
-<div class="table-wrap"><table><thead><tr><th>Received (UTC)</th><th>Severity</th><th>Category</th><th>Site</th><th>Message</th><th>Payload</th></tr></thead>
+<div class="table-wrap"><table><thead><tr><th>Received (UTC)</th><th>Severity</th><th>Category</th><th>Site</th><th>Message</th><th>LLM</th><th>Payload</th></tr></thead>
 <tbody>{rows}</tbody></table></div></div>
 </section>{admin_panel}</main></body></html>"""
 

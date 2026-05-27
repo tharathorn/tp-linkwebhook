@@ -590,3 +590,21 @@ class EventStore:
                     error,
                 ),
             )
+
+    def llm_incidents_for_event_ids(self, raw_event_ids):
+        ids = [int(item) for item in raw_event_ids if item is not None]
+        if not ids:
+            return {}
+        placeholders = ",".join("?" for _ in ids)
+        with self.connect() as db:
+            rows = db.execute(
+                f"SELECT * FROM llm_incidents WHERE raw_event_id IN ({placeholders})", ids
+            ).fetchall()
+        result = {}
+        for row in rows:
+            item = dict(row)
+            item["recommended_actions"] = json.loads(item["recommended_actions_json"])
+            item["requires_human"] = bool(item["requires_human"])
+            item["should_notify"] = bool(item["should_notify"])
+            result[int(item["raw_event_id"])] = item
+        return result
