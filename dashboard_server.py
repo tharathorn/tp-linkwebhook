@@ -230,12 +230,19 @@ h2 {{ margin:0; font-size:17px; }} .panel-meta {{ color:var(--muted); font-size:
 .sev.critical {{ color:var(--red); background:rgba(255,77,113,.14); }}
 .category {{ font:12px "Consolas","SFMono-Regular",monospace; color:var(--cyan); background:rgba(33,212,253,.08); padding:4px 8px; border-radius:6px; }}
 .site {{ color:var(--muted); font-size:12px; }}
-.table-wrap {{ overflow:auto; max-height:680px; -webkit-overflow-scrolling:touch; }}
-table {{ width:100%; border-collapse:collapse; min-width:760px; }}
+.table-wrap {{ overflow-y:auto; overflow-x:hidden; max-height:680px; -webkit-overflow-scrolling:touch; }}
+table {{ width:100%; border-collapse:collapse; min-width:0; table-layout:fixed; }}
 th {{ position:sticky; top:0; z-index:1; background:#101829; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; font-size:10px; }}
-th,td {{ text-align:left; padding:13px 14px; border-bottom:1px solid rgba(29,42,66,.75); vertical-align:top; }}
+th,td {{ text-align:left; padding:13px 14px; border-bottom:1px solid rgba(29,42,66,.75); vertical-align:top; overflow-wrap:anywhere; word-break:break-word; }}
 tbody tr:hover {{ background:rgba(33,212,253,.035); }}
-td:first-child {{ white-space:nowrap; color:var(--muted); font-size:12px; }}
+td:first-child {{ white-space:normal; color:var(--muted); font-size:12px; }}
+th:nth-child(1), td:nth-child(1) {{ width:16%; }}
+th:nth-child(2), td:nth-child(2) {{ width:9%; }}
+th:nth-child(3), td:nth-child(3) {{ width:13%; }}
+th:nth-child(4), td:nth-child(4) {{ width:10%; }}
+th:nth-child(5), td:nth-child(5) {{ width:23%; }}
+th:nth-child(6), td:nth-child(6) {{ width:15%; }}
+th:nth-child(7), td:nth-child(7) {{ width:14%; }}
 .empty {{ color:var(--muted); padding:17px 5px; }}
 .admin-panel {{ margin-top:18px; }}
 .admin-header {{ display:flex; justify-content:space-between; align-items:center; gap:18px; }}
@@ -269,7 +276,7 @@ td:first-child {{ white-space:nowrap; color:var(--muted); font-size:12px; }}
   .panel-header {{ padding:14px 14px 10px; }}
   .alerts-body {{ padding:6px 10px 10px; }}
   .alert {{ padding:10px 4px; }}
-  table {{ min-width:680px; }}
+  table {{ min-width:0; }}
   th,td {{ padding:10px 9px; }}
   td:first-child {{ min-width:156px; }}
   .alert-message {{ font-size:13px; }}
@@ -283,7 +290,7 @@ td:first-child {{ white-space:nowrap; color:var(--muted); font-size:12px; }}
   .eyebrow {{ letter-spacing:.13em; }}
   h1 {{ font-size:26px; line-height:1.1; }}
   .table-wrap {{ max-height:440px; }}
-  table {{ min-width:620px; }}
+  table {{ min-width:0; }}
   .category {{ font-size:11px; }}
 }}
 </style></head><body>
